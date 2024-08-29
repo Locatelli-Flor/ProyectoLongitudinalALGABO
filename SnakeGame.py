@@ -1,5 +1,6 @@
 import pygame
 import random
+import time
 
 # Inicializar pygame
 pygame.init()
@@ -13,14 +14,18 @@ white = (255, 255, 255)
 dis_width = 800
 dis_height = 600
 
+score = 0
+
 class SnakeGame:
     def __init__(self):
         self.dis = pygame.display.set_mode((dis_width, dis_height))
         pygame.display.set_caption('Snake Game')
         self.clock = pygame.time.Clock()
         self.snake_block = 10
-        self.snake_speed = 10  # Reducir la velocidad a 10 para un juego más lento
+        self.snake_speed = 10
         self.font_style = pygame.font.SysFont("bahnschrift", 25)
+        self.get_time_since_last_apple = 0
+        self.score = 0
         self.reset()
 
     def reset(self):
@@ -46,7 +51,19 @@ class SnakeGame:
 
     def game_over(self):
         return self.game_over_flag
+    
+    def get_time_since_last_apple(self):
+        current_time = pygame.time.get_ticks()
+        time_elapsed = (current_time - self.last_apple_time) / 1000
+        return time_elapsed
+    
 
+    def get_game_score(self):
+        time_weight = 0.1  # Ponderación para el tiempo
+        time_elapsed = pygame.time.get_ticks() / 1000  # Tiempo transcurrido en segundos
+        score = (self.get_score(self)) - (time_elapsed * time_weight)
+        return score
+    
     def get_score(self):
         return self.Length_of_snake - 1
 
@@ -73,7 +90,8 @@ class SnakeGame:
         self.y1 += self.y1_change
 
         # Verificar colisiones
-        if self.x1 >= dis_width or self.x1 < 0 or self.y1 >= dis_height or self.y1 < 0:
+        if self.x1 >= dis_width or self.x1 < 0 or self.y1 >= dis_height or self.y1 < 0 or self.get_time_since_last_apple(self) > 5:
+            self.score -= 10
             self.game_over_flag = True
 
         self.snake_List.append([self.x1, self.y1])
@@ -82,12 +100,14 @@ class SnakeGame:
 
         for x in self.snake_List[:-1]:
             if x == [self.x1, self.y1]:
+                self.score -= 10
                 self.game_over_flag = True
 
         if self.x1 == self.foodx and self.y1 == self.foody:
             self.foodx = round(random.randrange(0, dis_width - self.snake_block) / 10.0) * 10.0
             self.foody = round(random.randrange(0, dis_height - self.snake_block) / 10.0) * 10.0
             self.Length_of_snake += 1
+            self.score += 2
 
     def render(self, generation, score):
         self.dis.fill(black)

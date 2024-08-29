@@ -21,12 +21,12 @@ def evaluate(nn, game, generation):
             game.step(action)
             game.render(generation, score)
 
-    return game.get_score()  # Retorna el puntaje final
+    return game.get_game_score()  # Retorna el puntaje final
 
 def genetic_algorithm():
     population_size = 25
     generations = 50
-    mutation_rate = 0.1
+    mutation_rate = 0.2
     
     population = [NeuralNetwork() for _ in range(population_size)]
     
