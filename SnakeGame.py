@@ -1,6 +1,6 @@
 import pygame
 import random
-import time
+import math
 
 # Inicializar pygame
 pygame.init()
@@ -14,8 +14,6 @@ white = (255, 255, 255)
 dis_width = 800
 dis_height = 600
 
-score = 0
-
 class SnakeGame:
     def __init__(self):
         self.dis = pygame.display.set_mode((dis_width, dis_height))
@@ -24,8 +22,6 @@ class SnakeGame:
         self.snake_block = 10
         self.snake_speed = 10
         self.font_style = pygame.font.SysFont("bahnschrift", 25)
-        self.get_time_since_last_apple = 0
-        self.score = 0
         self.reset()
 
     def reset(self):
@@ -41,29 +37,54 @@ class SnakeGame:
         self.game_over_flag = False
 
     def get_state(self):
-        # Normaliza las posiciones para obtener un estado del juego
+        head = (self.x1, self.y1)
+        left, front, right = self.check_surroundings(head, self.direction, self.snake_List, dis_width)
+        sin = self.get_sin_angle_to_food(head, (self.foodx, self.foody))
         return [
-            self.x1 / dis_width,
-            self.y1 / dis_height,
-            self.foodx / dis_width,
-            self.foody / dis_height
+            left,
+            front,
+            right,
+            sin
         ]
+    
+    def check_surroundings(self, snake_head, direction, snake_body, grid_size):
+        x, y = snake_head
+        left, front, right = 0, 0, 0
+
+        if direction == 2: # up
+            left = (x - 1, y) if x > 0 else (-1, -1)
+            front = (x, y - 1) if y > 0 else (-1, -1)
+            right = (x + 1, y) if x < grid_size - 1 else (-1, -1)
+        elif direction == 3: # down
+            left = (x + 1, y) if x < grid_size - 1 else (-1, -1)
+            front = (x, y + 1) if y < grid_size - 1 else (-1, -1)
+            right = (x - 1, y) if x > 0 else (-1, -1)
+        elif direction == 0: # left
+            left = (x, y + 1) if y < grid_size - 1 else (-1, -1)
+            front = (x - 1, y) if x > 0 else (-1, -1)
+            right = (x, y - 1) if y > 0 else (-1, -1)
+        elif direction == 1: # right
+            left = (x, y - 1) if y > 0 else (-1, -1)
+            front = (x + 1, y) if x < grid_size - 1 else (-1, -1)
+            right = (x, y + 1) if y < grid_size - 1 else (-1, -1)
+
+        left_value = 1 if left in snake_body or left == (-1, -1) else 0
+        front_value = 1 if front in snake_body or front == (-1, -1) else 0
+        right_value = 1 if right in snake_body or right == (-1, -1) else 0
+
+        return left_value, front_value, right_value
+
+
+    def get_sin_angle_to_food(self, snake_head, food_position):
+        x1, y1 = snake_head
+        x2, y2 = food_position
+        angle = math.atan2(y2 - y1, x2 - x1)
+        return math.sin(angle)
+
 
     def game_over(self):
         return self.game_over_flag
-    
-    def get_time_since_last_apple(self):
-        current_time = pygame.time.get_ticks()
-        time_elapsed = (current_time - self.last_apple_time) / 1000
-        return time_elapsed
-    
 
-    def get_game_score(self):
-        time_weight = 0.1  # Ponderación para el tiempo
-        time_elapsed = pygame.time.get_ticks() / 1000  # Tiempo transcurrido en segundos
-        score = (self.get_score(self)) - (time_elapsed * time_weight)
-        return score
-    
     def get_score(self):
         return self.Length_of_snake - 1
 
@@ -90,8 +111,7 @@ class SnakeGame:
         self.y1 += self.y1_change
 
         # Verificar colisiones
-        if self.x1 >= dis_width or self.x1 < 0 or self.y1 >= dis_height or self.y1 < 0 or self.get_time_since_last_apple(self) > 5:
-            self.score -= 10
+        if self.x1 >= dis_width or self.x1 < 0 or self.y1 >= dis_height or self.y1 < 0:
             self.game_over_flag = True
 
         self.snake_List.append([self.x1, self.y1])
@@ -100,20 +120,18 @@ class SnakeGame:
 
         for x in self.snake_List[:-1]:
             if x == [self.x1, self.y1]:
-                self.score -= 10
                 self.game_over_flag = True
 
         if self.x1 == self.foodx and self.y1 == self.foody:
             self.foodx = round(random.randrange(0, dis_width - self.snake_block) / 10.0) * 10.0
             self.foody = round(random.randrange(0, dis_height - self.snake_block) / 10.0) * 10.0
             self.Length_of_snake += 1
-            self.score += 2
 
     def render(self, generation, score):
         self.dis.fill(black)
         pygame.draw.rect(self.dis, red, [self.foodx, self.foody, self.snake_block, self.snake_block])
         for x in self.snake_List:
-            pygame.draw.rect(self.dis, white, [x[0], x[1], self.snake_block, self.snake_block])  # Cambiar la serpiente a blanca para mayor visibilidad
+            pygame.draw.rect(self.dis, white, [x[0], x[1], self.snake_block, self.snake_block])
 
         # Mostrar la generación y el puntaje en pantalla
         gen_text = self.font_style.render(f"Generation: {generation}", True, white)
@@ -122,6 +140,10 @@ class SnakeGame:
         self.dis.blit(score_text, [0, 30])
 
         pygame.display.update()
+
+        # Reducir la velocidad del juego ajustando los FPS
+        self.clock.tick(60)
+
 
     def close(self):
         pygame.quit()
