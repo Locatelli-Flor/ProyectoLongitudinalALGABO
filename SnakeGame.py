@@ -23,13 +23,14 @@ class SnakeGame:
         self.snake_speed = 10
         self.font_style = pygame.font.SysFont("bahnschrift", 25)
         self.reset()
+        self.focused = True  # Indica si la ventana está en foco
 
     def reset(self):
         self.x1 = dis_width / 2
         self.y1 = dis_height / 2
         self.x1_change = 0
         self.y1_change = 0
-        self.direction = None
+        self.direction = 0
         self.snake_List = []
         self.Length_of_snake = 1
         self.foodx = round(random.randrange(0, dis_width - self.snake_block) / 10.0) * 10.0
@@ -46,24 +47,28 @@ class SnakeGame:
             right,
             sin
         ]
-    
+
+    def get_distance_to_apple(self):
+        """Devuelve la distancia Euclidiana desde la cabeza de la serpiente hasta la manzana."""
+        return math.sqrt((self.x1 - self.foodx) ** 2 + (self.y1 - self.foody) ** 2)
+
     def check_surroundings(self, snake_head, direction, snake_body, grid_size):
         x, y = snake_head
         left, front, right = 0, 0, 0
 
-        if direction == 2: # up
+        if direction == 2:  # up
             left = (x - 1, y) if x > 0 else (-1, -1)
             front = (x, y - 1) if y > 0 else (-1, -1)
             right = (x + 1, y) if x < grid_size - 1 else (-1, -1)
-        elif direction == 3: # down
+        elif direction == 3:  # down
             left = (x + 1, y) if x < grid_size - 1 else (-1, -1)
             front = (x, y + 1) if y < grid_size - 1 else (-1, -1)
             right = (x - 1, y) if x > 0 else (-1, -1)
-        elif direction == 0: # left
+        elif direction == 0:  # left
             left = (x, y + 1) if y < grid_size - 1 else (-1, -1)
             front = (x - 1, y) if x > 0 else (-1, -1)
             right = (x, y - 1) if y > 0 else (-1, -1)
-        elif direction == 1: # right
+        elif direction == 1:  # right
             left = (x, y - 1) if y > 0 else (-1, -1)
             front = (x + 1, y) if x < grid_size - 1 else (-1, -1)
             right = (x, y + 1) if y < grid_size - 1 else (-1, -1)
@@ -74,19 +79,20 @@ class SnakeGame:
 
         return left_value, front_value, right_value
 
-
     def get_sin_angle_to_food(self, snake_head, food_position):
         x1, y1 = snake_head
         x2, y2 = food_position
         angle = math.atan2(y2 - y1, x2 - x1)
         return math.sin(angle)
 
-
     def game_over(self):
         return self.game_over_flag
 
     def get_score(self):
         return self.Length_of_snake - 1
+
+    def ate_apple(self):
+        return self.x1 == self.foodx and self.y1 == self.foody
 
     def step(self, action):
         # Acciones: 0 = Izquierda, 1 = Derecha, 2 = Arriba, 3 = Abajo
@@ -128,22 +134,39 @@ class SnakeGame:
             self.Length_of_snake += 1
 
     def render(self, generation, score):
-        self.dis.fill(black)
-        pygame.draw.rect(self.dis, red, [self.foodx, self.foody, self.snake_block, self.snake_block])
-        for x in self.snake_List:
-            pygame.draw.rect(self.dis, white, [x[0], x[1], self.snake_block, self.snake_block])
+        # Manejar eventos
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+            elif event.type == pygame.ACTIVEEVENT:
+                if event.gain == 0:
+                    self.focused = False
+                else:
+                    self.focused = True
 
-        # Mostrar la generación y el puntaje en pantalla
-        gen_text = self.font_style.render(f"Generation: {generation}", True, white)
-        score_text = self.font_style.render(f"Score: {score}", True, white)
-        self.dis.blit(gen_text, [0, 0])
-        self.dis.blit(score_text, [0, 30])
+        # Si la ventana está en foco, renderizar
+        if self.focused:
+            self.dis.fill(black)
 
-        pygame.display.update()
+            # Dibujar la comida
+            pygame.draw.rect(self.dis, red, [self.foodx, self.foody, self.snake_block, self.snake_block])
+
+            # Dibujar la serpiente
+            for x in self.snake_List:
+                pygame.draw.rect(self.dis, white, [x[0], x[1], self.snake_block, self.snake_block])
+
+            # Mostrar la generación y el puntaje en pantalla
+            gen_text = self.font_style.render(f"Generation: {generation}", True, white)
+            score_text = self.font_style.render(f"Score: {score}", True, white)
+            self.dis.blit(gen_text, [0, 0])
+            self.dis.blit(score_text, [0, 30])
+
+            pygame.display.update()
 
         # Reducir la velocidad del juego ajustando los FPS
         self.clock.tick(60)
 
-
     def close(self):
         pygame.quit()
+
