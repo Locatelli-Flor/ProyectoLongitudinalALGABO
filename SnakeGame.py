@@ -100,20 +100,20 @@ class SnakeGame:
         previous_position = self.x1, self.y1
 
         # Acciones: 0 = Izquierda, 1 = Derecha, 2 = Arriba, 3 = Abajo
-        if action == 0 and self.direction != 1:  # Turn left
-            self.x1_change = -self.snake_block  # Move left
+        if action == 0 and self.direction != 1: 
+            self.x1_change = -self.snake_block 
             self.y1_change = 0
             self.direction = 0
-        elif action == 1 and self.direction != 0:  # Turn right
-            self.x1_change = self.snake_block  # Move right
+        elif action == 1 and self.direction != 0:
+            self.x1_change = self.snake_block
             self.y1_change = 0
             self.direction = 1
-        elif action == 2 and self.direction != 3:  # Turn up
-            self.y1_change = -self.snake_block  # Move up
+        elif action == 2 and self.direction != 3:
+            self.y1_change = -self.snake_block
             self.x1_change = 0
             self.direction = 2
-        elif action == 3 and self.direction != 2:  # Turn down
-            self.y1_change = self.snake_block  # Move down
+        elif action == 3 and self.direction != 2:
+            self.y1_change = self.snake_block
             self.x1_change = 0
             self.direction = 3
 
@@ -137,7 +137,6 @@ class SnakeGame:
             self.foody = round(random.randrange(0, dis_height - self.snake_block) / 10.0) * 10.0
             self.Length_of_snake += 1
 
-        # New check: End the game if the snake hasn't moved
         if (self.x1, self.y1) == previous_position:
             print("Snake stayed still! Ending game.")
             self.game_over_flag = True
