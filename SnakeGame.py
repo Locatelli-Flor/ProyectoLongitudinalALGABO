@@ -33,6 +33,7 @@ class SnakeGame:
         self.direction = 0
         self.snake_List = []
         self.Length_of_snake = 1
+        self.direction = 1
         self.foodx = round(random.randrange(0, dis_width - self.snake_block) / 10.0) * 10.0
         self.foody = round(random.randrange(0, dis_height - self.snake_block) / 10.0) * 10.0
         self.game_over_flag = False
@@ -45,7 +46,8 @@ class SnakeGame:
             left,
             front,
             right,
-            sin
+            self.x1 - self.foodx,
+            self.y1 - self.foody
         ]
 
     def get_distance_to_apple(self):
@@ -95,21 +97,23 @@ class SnakeGame:
         return self.x1 == self.foodx and self.y1 == self.foody
 
     def step(self, action):
+        previous_position = self.x1, self.y1
+
         # Acciones: 0 = Izquierda, 1 = Derecha, 2 = Arriba, 3 = Abajo
-        if action == 0 and self.direction != 1:
-            self.x1_change = -self.snake_block
+        if action == 0 and self.direction != 1:  # Turn left
+            self.x1_change = -self.snake_block  # Move left
             self.y1_change = 0
             self.direction = 0
-        elif action == 1 and self.direction != 0:
-            self.x1_change = self.snake_block
+        elif action == 1 and self.direction != 0:  # Turn right
+            self.x1_change = self.snake_block  # Move right
             self.y1_change = 0
             self.direction = 1
-        elif action == 2 and self.direction != 3:
-            self.y1_change = -self.snake_block
+        elif action == 2 and self.direction != 3:  # Turn up
+            self.y1_change = -self.snake_block  # Move up
             self.x1_change = 0
             self.direction = 2
-        elif action == 3 and self.direction != 2:
-            self.y1_change = self.snake_block
+        elif action == 3 and self.direction != 2:  # Turn down
+            self.y1_change = self.snake_block  # Move down
             self.x1_change = 0
             self.direction = 3
 
@@ -132,6 +136,11 @@ class SnakeGame:
             self.foodx = round(random.randrange(0, dis_width - self.snake_block) / 10.0) * 10.0
             self.foody = round(random.randrange(0, dis_height - self.snake_block) / 10.0) * 10.0
             self.Length_of_snake += 1
+
+        # New check: End the game if the snake hasn't moved
+        if (self.x1, self.y1) == previous_position:
+            print("Snake stayed still! Ending game.")
+            self.game_over_flag = True
 
     def render(self, generation, score):
         # Manejar eventos
@@ -165,7 +174,7 @@ class SnakeGame:
             pygame.display.update()
 
         # Reducir la velocidad del juego ajustando los FPS
-        self.clock.tick(60)
+        self.clock.tick(30)
 
     def close(self):
         pygame.quit()

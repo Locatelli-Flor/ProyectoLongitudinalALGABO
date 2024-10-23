@@ -3,8 +3,8 @@ import random
 from SnakeGame import SnakeGame
 
 class NeuralNetwork:
-    def __init__(self, input_size=4, hidden_size=6, output_size=3):
-        # Inicialización de pesos con dimensiones ajustadas para 3 salidas
+    def __init__(self, input_size=5, hidden_size=6, output_size=4):
+        # Inicialización de pesos con dimensiones ajustadas para 4 salidas
         self.weights1 = np.random.randn(input_size, hidden_size)
         self.weights2 = np.random.randn(hidden_size, output_size)
 
@@ -37,17 +37,20 @@ def evaluate(nn, game, generation, max_steps=500, step_penalty_threshold=100):
         # Recompensa por acercarse a la manzana
         if new_distance < prev_distance:
             total_score += 1
+        else:
+            total_score -= 1
 
         prev_distance = new_distance
 
         # Recompensa por comer la manzana
         if game.ate_apple():
-            total_score += 200
+            total_score += 300
             prev_distance = game.get_distance_to_apple()  # Resetear la distancia con nueva comida
+            steps = 0
 
-        # Penalización por dar muchos pasos sin progreso
-        if steps > step_penalty_threshold:
-            total_score -= 2
+        # Penalización adicional si choca
+        if game.game_over():
+            total_score -= 100
 
     # Agregar puntaje basado en el tamaño de la serpiente
     total_score += game.get_score() * 10
