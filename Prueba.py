@@ -4,29 +4,38 @@ from SnakeGame import SnakeGame
 
 class NeuralNetwork:
     def __init__(self, input_size=5, hidden_size=6, output_size=4):
-        # Inicialización de pesos con dimensiones ajustadas para 4 salidas
         self.weights1 = np.random.randn(input_size, hidden_size)
         self.weights2 = np.random.randn(hidden_size, output_size)
 
-    def predict(self, state):
-        # Forward pass con activación ReLU en la capa oculta
+    def predict(self, state, current_direction):
         layer1 = np.dot(state, self.weights1)
         layer1 = np.maximum(0, layer1)  # ReLU
         output = np.dot(layer1, self.weights2)
-        action = np.argmax(output)  # Selección de la acción con mayor valor
+
+        # Get action probabilities sorted by their values and indices
+        sorted_actions = np.argsort(-output)  # Negative for descending order
+
+        # Define opposite directions: 0 = Left, 1 = Right, 2 = Up, 3 = Down
+        opposite_direction = {0: 1, 1: 0, 2: 3, 3: 2}
+
+        # If the most probable action is the opposite, take the second
+        if sorted_actions[0] == opposite_direction[current_direction]:
+            action = sorted_actions[1]
+        else:
+            action = sorted_actions[0]
+
         return action
 
-def evaluate(nn, game, generation, max_steps=500, step_penalty_threshold=100):
+def evaluate(nn, game, generation):
     total_score = 0
     steps = 0
     game.reset()
 
     prev_distance = game.get_distance_to_apple()
 
-    while not game.game_over() and steps < max_steps:
+    while not game.game_over():
         state = game.get_state()
-        action = nn.predict(state)
-
+        action = nn.predict(state, game.direction)
         game.step(action)
         game.render(generation, total_score)
         steps += 1
@@ -38,7 +47,8 @@ def evaluate(nn, game, generation, max_steps=500, step_penalty_threshold=100):
         if new_distance < prev_distance:
             total_score += 1
         else:
-            total_score -= 1
+            if total_score < 300:
+                total_score -= 1
 
         prev_distance = new_distance
 
@@ -51,6 +61,12 @@ def evaluate(nn, game, generation, max_steps=500, step_penalty_threshold=100):
         # Penalización adicional si choca
         if game.game_over():
             total_score -= 100
+
+        if steps > 600 + 800:
+            total_score -= 1
+
+        if total_score < -100:
+            break
 
     # Agregar puntaje basado en el tamaño de la serpiente
     total_score += game.get_score() * 10

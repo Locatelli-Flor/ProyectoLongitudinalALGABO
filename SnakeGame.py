@@ -24,6 +24,7 @@ class SnakeGame:
         self.font_style = pygame.font.SysFont("bahnschrift", 25)
         self.reset()
         self.focused = True  # Indica si la ventana está en foco
+        self.apples_eaten = 0
 
     def reset(self):
         self.x1 = dis_width / 2
@@ -37,11 +38,11 @@ class SnakeGame:
         self.foodx = round(random.randrange(0, dis_width - self.snake_block) / 10.0) * 10.0
         self.foody = round(random.randrange(0, dis_height - self.snake_block) / 10.0) * 10.0
         self.game_over_flag = False
+        self.apples_eaten = 0
 
     def get_state(self):
         head = (self.x1, self.y1)
         left, front, right = self.check_surroundings(head, self.direction, self.snake_List, dis_width)
-        sin = self.get_sin_angle_to_food(head, (self.foodx, self.foody))
         return [
             left,
             front,
@@ -135,6 +136,7 @@ class SnakeGame:
         if self.x1 == self.foodx and self.y1 == self.foody:
             self.foodx = round(random.randrange(0, dis_width - self.snake_block) / 10.0) * 10.0
             self.foody = round(random.randrange(0, dis_height - self.snake_block) / 10.0) * 10.0
+            self.apples_eaten += 1
             self.Length_of_snake += 1
 
         if (self.x1, self.y1) == previous_position:
@@ -167,13 +169,15 @@ class SnakeGame:
             # Mostrar la generación y el puntaje en pantalla
             gen_text = self.font_style.render(f"Generation: {generation}", True, white)
             score_text = self.font_style.render(f"Score: {score}", True, white)
+            apples_eaten = self.font_style.render(f"Apples eaten: {self.apples_eaten}", True, white)
             self.dis.blit(gen_text, [0, 0])
             self.dis.blit(score_text, [0, 30])
+            self.dis.blit(apples_eaten, [0, 60])
 
             pygame.display.update()
 
         # Reducir la velocidad del juego ajustando los FPS
-        self.clock.tick(30)
+        self.clock.tick(512)
 
     def close(self):
         pygame.quit()
