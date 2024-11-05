@@ -12,13 +12,13 @@ class NeuralNetwork:
         layer1 = np.maximum(0, layer1)  # ReLU
         output = np.dot(layer1, self.weights2)
 
-        # Get action probabilities sorted by their values and indices
-        sorted_actions = np.argsort(-output)  # Negative for descending order
+        # Obtener las probabilidades de acción ordenadas por sus valores e índices
+        sorted_actions = np.argsort(-output)  # Ordenar de mayor a menor
 
-        # Define opposite directions: 0 = Left, 1 = Right, 2 = Up, 3 = Down
+        # Definir direcciones opuestas: 0 = Izquierda, 1 = Derecha, 2 = Arriba, 3 = Abajo
         opposite_direction = {0: 1, 1: 0, 2: 3, 3: 2}
 
-        # If the most probable action is the opposite, take the second
+        # Si la acción más probable es la opuesta, tomar la segunda acción más probable
         if sorted_actions[0] == opposite_direction[current_direction]:
             action = sorted_actions[1]
         else:
