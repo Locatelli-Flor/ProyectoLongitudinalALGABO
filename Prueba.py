@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import random
 from SnakeGame import SnakeGame
@@ -12,13 +13,9 @@ class NeuralNetwork:
         layer1 = np.maximum(0, layer1)  # ReLU
         output = np.dot(layer1, self.weights2)
 
-        # Obtener las probabilidades de acción ordenadas por sus valores e índices
         sorted_actions = np.argsort(-output)  # Ordenar de mayor a menor
-
-        # Definir direcciones opuestas: 0 = Izquierda, 1 = Derecha, 2 = Arriba, 3 = Abajo
         opposite_direction = {0: 1, 1: 0, 2: 3, 3: 2}
 
-        # Si la acción más probable es la opuesta, tomar la segunda acción más probable
         if sorted_actions[0] == opposite_direction[current_direction]:
             action = sorted_actions[1]
         else:
@@ -40,10 +37,8 @@ def evaluate(nn, game, generation):
         game.render(generation, total_score)
         steps += 1
 
-        # Obtener nueva distancia a la manzana
         new_distance = game.get_distance_to_apple()
 
-        # Recompensa por acercarse a la manzana
         if new_distance < prev_distance:
             total_score += 1
         else:
@@ -52,29 +47,25 @@ def evaluate(nn, game, generation):
 
         prev_distance = new_distance
 
-        # Recompensa por comer la manzana
         if game.ate_apple():
             total_score += 300
-            prev_distance = game.get_distance_to_apple()  # Resetear la distancia con nueva comida
+            prev_distance = game.get_distance_to_apple()
             steps = 0
 
-        # Penalización adicional si choca
         if game.game_over():
             total_score -= 100
 
-        if steps > 600 + 800:
+        if steps > 1400:
             total_score -= 1
 
         if total_score < -100:
             break
 
-    # Agregar puntaje basado en el tamaño de la serpiente
     total_score += game.get_score() * 10
 
     return total_score
 
 def mutate(weights, mutation_rate=0.05, mutation_strength=0.3):
-    # Aplicar mutación con una tasa y fuerza definidas
     mutation_mask = np.random.rand(*weights.shape) < mutation_rate
     mutations = np.random.randn(*weights.shape) * mutation_strength
     weights += mutations * mutation_mask
@@ -84,15 +75,12 @@ def tournament_selection(population, scores, k=5):
     selected = []
     population_size = len(population)
     for _ in range(population_size // 2):
-        # Seleccionar 'k' individuos al azar para el torneo
         participants = random.sample(list(zip(population, scores)), k)
-        # Seleccionar el individuo con el mejor puntaje
         selected.append(max(participants, key=lambda x: x[1])[0])
     return selected
 
 def crossover(parent1, parent2):
     child = NeuralNetwork()
-    # Combinar los pesos de los padres usando un punto de cruce aleatorio
     child.weights1 = np.where(np.random.rand(*parent1.weights1.shape) > 0.5, parent1.weights1, parent2.weights1)
     child.weights2 = np.where(np.random.rand(*parent1.weights2.shape) > 0.5, parent1.weights2, parent2.weights2)
     return child
@@ -101,43 +89,64 @@ def genetic_algorithm(population_size=50, generations=50, mutation_rate=0.05, el
     game = SnakeGame()
     population = [NeuralNetwork() for _ in range(population_size)]
 
-    for generation in range(generations):
-        # Evaluar el puntaje de cada individuo en la población
-        scores = [evaluate(nn, game, generation) for nn in population]
+    # Almacenar métricas por generación
+    best_scores = []
+    avg_scores = []
+    min_scores = []
 
-        # Encontrar el mejor puntaje de la generación actual
-        best_score = max(scores)
-        avg_score = sum(scores) / len(scores)
-        print(f"Generación {generation + 1}: Mejor Puntaje = {best_score}, Puntaje Promedio = {avg_score:.2f}")
+    try:
+        for generation in range(generations):
+            scores = [evaluate(nn, game, generation) for nn in population]
 
-        # Selección de los mejores individuos
-        selected = tournament_selection(population, scores)
+            best_score = max(scores)
+            avg_score = sum(scores) / len(scores)
+            min_score = min(scores)
 
-        # Implementar elitismo: preservar el mejor individuo
-        if elitism:
-            elite_idx = np.argmax(scores)
-            elite = population[elite_idx]
-        else:
-            elite = None
+            best_scores.append(best_score)
+            avg_scores.append(avg_score)
+            min_scores.append(min_score)
 
-        # Crear una nueva población mediante cruce y mutación
-        new_population = []
-        while len(new_population) < population_size - (1 if elitism else 0):
-            parent1, parent2 = random.sample(selected, 2)
-            child = crossover(parent1, parent2)
-            # Mutar los pesos del hijo
-            child.weights1 = mutate(child.weights1, mutation_rate)
-            child.weights2 = mutate(child.weights2, mutation_rate)
-            new_population.append(child)
+            print(f"Generación {generation + 1}: Mejor Puntaje = {best_score}, Promedio = {avg_score:.2f}, Mínimo = {min_score}")
 
-        # Añadir el elite a la nueva población
-        if elitism:
-            new_population.append(elite)
+            selected = tournament_selection(population, scores)
 
-        population = new_population
+            if elitism:
+                elite_idx = np.argmax(scores)
+                elite = population[elite_idx]
+            else:
+                elite = None
 
-    # Cerrar el juego después de todas las generaciones
-    game.close()
+            new_population = []
+            while len(new_population) < population_size - (1 if elitism else 0):
+                parent1, parent2 = random.sample(selected, 2)
+                child = crossover(parent1, parent2)
+                child.weights1 = mutate(child.weights1, mutation_rate)
+                child.weights2 = mutate(child.weights2, mutation_rate)
+                new_population.append(child)
+
+            if elitism:
+                new_population.append(elite)
+
+            population = new_population
+
+    except KeyboardInterrupt:
+        print("Ejecución interrumpida. Mostrando gráficos...")
+
+    finally:
+        game.close()
+
+        # Graficar los resultados
+        generations = range(1, len(best_scores) + 1)
+        plt.figure(figsize=(10, 6))
+        plt.plot(generations, best_scores, label="Mejor Puntaje")
+        plt.plot(generations, avg_scores, label="Puntaje Promedio")
+        plt.plot(generations, min_scores, label="Puntaje Mínimo")
+        plt.xlabel("Generación")
+        plt.ylabel("Puntaje")
+        plt.title("Evolución de Puntajes por Generación")
+        plt.legend()
+        plt.grid()
+        plt.show()
 
 if __name__ == "__main__":
     genetic_algorithm()
