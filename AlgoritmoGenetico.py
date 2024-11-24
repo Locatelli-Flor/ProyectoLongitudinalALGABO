@@ -1,3 +1,4 @@
+import json
 import matplotlib.pyplot as plt
 import numpy as np
 import random
@@ -5,13 +6,13 @@ from SnakeGame import SnakeGame
 
 class NeuralNetwork:
     def __init__(self, input_size=5, hidden_size=6, output_size=4):
-        self.weights1 = np.random.randn(input_size, hidden_size)
-        self.weights2 = np.random.randn(hidden_size, output_size)
+        self.weights1 = np.random.randn(input_size, hidden_size).tolist()
+        self.weights2 = np.random.randn(hidden_size, output_size).tolist()
 
     def predict(self, state, current_direction):
-        layer1 = np.dot(state, self.weights1)
+        layer1 = np.dot(state, np.array(self.weights1))
         layer1 = np.maximum(0, layer1)  # ReLU
-        output = np.dot(layer1, self.weights2)
+        output = np.dot(layer1, np.array(self.weights2))
 
         sorted_actions = np.argsort(-output)  # Ordenar de mayor a menor
         opposite_direction = {0: 1, 1: 0, 2: 3, 3: 2}
@@ -23,7 +24,7 @@ class NeuralNetwork:
 
         return action
 
-def evaluate(nn, game, generation):
+def evaluate(nn, game, generation, render_simulation=True):
     total_score = 0
     steps = 0
     game.reset()
@@ -34,7 +35,10 @@ def evaluate(nn, game, generation):
         state = game.get_state()
         action = nn.predict(state, game.direction)
         game.step(action)
-        game.render(generation, total_score)
+
+        if render_simulation:  # Solo renderiza si la opción está habilitada
+            game.render(generation, total_score)
+        
         steps += 1
 
         new_distance = game.get_distance_to_apple()
@@ -66,10 +70,10 @@ def evaluate(nn, game, generation):
     return total_score
 
 def mutate(weights, mutation_rate=0.05, mutation_strength=0.3):
+    weights = np.array(weights)
     mutation_mask = np.random.rand(*weights.shape) < mutation_rate
     mutations = np.random.randn(*weights.shape) * mutation_strength
-    weights += mutations * mutation_mask
-    return weights
+    return (weights + mutations * mutation_mask).tolist()
 
 def tournament_selection(population, scores, k=5):
     selected = []
@@ -81,11 +85,25 @@ def tournament_selection(population, scores, k=5):
 
 def crossover(parent1, parent2):
     child = NeuralNetwork()
-    child.weights1 = np.where(np.random.rand(*parent1.weights1.shape) > 0.5, parent1.weights1, parent2.weights1)
-    child.weights2 = np.where(np.random.rand(*parent1.weights2.shape) > 0.5, parent1.weights2, parent2.weights2)
+    child.weights1 = np.where(np.random.rand(*np.array(parent1.weights1).shape) > 0.5, parent1.weights1, parent2.weights1).tolist()
+    child.weights2 = np.where(np.random.rand(*np.array(parent1.weights2).shape) > 0.5, parent1.weights2, parent2.weights2).tolist()
     return child
 
-def genetic_algorithm(population_size=50, generations=50, mutation_rate=0.05, elitism=True):
+def save_best_agents(generation, best_scores, best_agents):
+    data = []
+    for gen, score, agent in zip(generation, best_scores, best_agents):
+        data.append({
+            "generation": gen,
+            "score": score,
+            "weights1": agent.weights1,
+            "weights2": agent.weights2
+        })
+    
+    with open("best_agents.json", "w") as file:
+        json.dump(data, file, indent=4)
+    print(f"Resultados de las mejores redes neuronales por generación guardados en 'best_agents.json'.")
+
+def genetic_algorithm(population_size=50, generations=50, mutation_rate=0.05, elitism=True, render_simulation=True):
     game = SnakeGame()
     population = [NeuralNetwork() for _ in range(population_size)]
 
@@ -93,10 +111,11 @@ def genetic_algorithm(population_size=50, generations=50, mutation_rate=0.05, el
     best_scores = []
     avg_scores = []
     min_scores = []
+    best_agents = []
 
     try:
         for generation in range(generations):
-            scores = [evaluate(nn, game, generation) for nn in population]
+            scores = [evaluate(nn, game, generation, render_simulation) for nn in population]
 
             best_score = max(scores)
             avg_score = sum(scores) / len(scores)
@@ -106,12 +125,14 @@ def genetic_algorithm(population_size=50, generations=50, mutation_rate=0.05, el
             avg_scores.append(avg_score)
             min_scores.append(min_score)
 
+            elite_idx = np.argmax(scores)
+            best_agents.append(population[elite_idx])
+
             print(f"Generación {generation + 1}: Mejor Puntaje = {best_score}, Promedio = {avg_score:.2f}, Mínimo = {min_score}")
 
             selected = tournament_selection(population, scores)
 
             if elitism:
-                elite_idx = np.argmax(scores)
                 elite = population[elite_idx]
             else:
                 elite = None
@@ -135,6 +156,9 @@ def genetic_algorithm(population_size=50, generations=50, mutation_rate=0.05, el
     finally:
         game.close()
 
+        # Guardar los mejores agentes de todas las generaciones en un archivo JSON
+        save_best_agents(range(1, generations + 1), best_scores, best_agents)
+
         # Graficar los resultados
         generations = range(1, len(best_scores) + 1)
         plt.figure(figsize=(10, 6))
@@ -149,4 +173,11 @@ def genetic_algorithm(population_size=50, generations=50, mutation_rate=0.05, el
         plt.show()
 
 if __name__ == "__main__":
-    genetic_algorithm()
+    # Solicitar al usuario el número de generaciones y agentes, y si quiere ver la simulación
+    population_size = int(input("Introduce la cantidad de agentes (población): "))
+    generations = int(input("Introduce la cantidad de generaciones: "))
+    render_option = input("¿Quieres ver la simulación en Pygame? (y/n): ").strip().lower()
+
+    render_simulation = True if render_option == "y" else False
+
+    genetic_algorithm(population_size=population_size, generations=generations, render_simulation=render_simulation)
