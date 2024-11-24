@@ -52,33 +52,36 @@ class SnakeGame:
         ]
 
     def get_distance_to_apple(self):
-        """Devuelve la distancia Euclidiana desde la cabeza de la serpiente hasta la manzana."""
+        # Devuelve la distancia Euclidiana desde la cabeza de la serpiente hasta la manzana
         return math.sqrt((self.x1 - self.foodx) ** 2 + (self.y1 - self.foody) ** 2)
 
     def check_surroundings(self, snake_head, direction, snake_body, grid_size):
         x, y = snake_head
-        left, front, right = 0, 0, 0
-
-        if direction == 2:  # up
-            left = (x - 1, y) if x > 0 else (-1, -1)
-            front = (x, y - 1) if y > 0 else (-1, -1)
-            right = (x + 1, y) if x < grid_size - 1 else (-1, -1)
-        elif direction == 3:  # down
-            left = (x + 1, y) if x < grid_size - 1 else (-1, -1)
-            front = (x, y + 1) if y < grid_size - 1 else (-1, -1)
-            right = (x - 1, y) if x > 0 else (-1, -1)
-        elif direction == 0:  # left
-            left = (x, y + 1) if y < grid_size - 1 else (-1, -1)
-            front = (x - 1, y) if x > 0 else (-1, -1)
-            right = (x, y - 1) if y > 0 else (-1, -1)
-        elif direction == 1:  # right
-            left = (x, y - 1) if y > 0 else (-1, -1)
-            front = (x + 1, y) if x < grid_size - 1 else (-1, -1)
-            right = (x, y + 1) if y < grid_size - 1 else (-1, -1)
-
-        left_value = 1 if left in snake_body or left == (-1, -1) else 0
-        front_value = 1 if front in snake_body or front == (-1, -1) else 0
-        right_value = 1 if right in snake_body or right == (-1, -1) else 0
+        
+        relative_directions = {
+            2: [(-1, 0), (0, -1), (1, 0)],
+            3: [(1, 0), (0, 1), (-1, 0)],
+            0: [(0, 1), (-1, 0), (0, -1)],
+            1: [(0, -1), (1, 0), (0, 1)]
+        }
+        
+        left_move, front_move, right_move = relative_directions[direction]
+        
+        left = (x + left_move[0], y + left_move[1])
+        front = (x + front_move[0], y + front_move[1])
+        right = (x + right_move[0], y + right_move[1])
+        
+        def is_dangerous(pos):
+            px, py = pos
+            return (
+                px < 0 or px >= grid_size or
+                py < 0 or py >= grid_size or
+                pos in snake_body
+            )
+        
+        left_value = 1 if is_dangerous(left) else 0
+        front_value = 1 if is_dangerous(front) else 0
+        right_value = 1 if is_dangerous(right) else 0
 
         return left_value, front_value, right_value
 
@@ -100,7 +103,6 @@ class SnakeGame:
     def step(self, action):
         previous_position = self.x1, self.y1
 
-        # Acciones: 0 = Izquierda, 1 = Derecha, 2 = Arriba, 3 = Abajo
         if action == 0 and self.direction != 1: 
             self.x1_change = -self.snake_block 
             self.y1_change = 0
@@ -121,7 +123,6 @@ class SnakeGame:
         self.x1 += self.x1_change
         self.y1 += self.y1_change
 
-        # Verificar colisiones
         if self.x1 >= dis_width or self.x1 < 0 or self.y1 >= dis_height or self.y1 < 0:
             self.game_over_flag = True
 
@@ -177,7 +178,7 @@ class SnakeGame:
             pygame.display.update()
 
         # Reducir la velocidad del juego ajustando los FPS
-        self.clock.tick(512)
+        self.clock.tick(120)
 
     def close(self):
         pygame.quit()
